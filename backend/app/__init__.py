@@ -1,0 +1,1 @@
+"""QuickSplit backend application package."""
