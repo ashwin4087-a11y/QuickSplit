@@ -1,5 +1,7 @@
+from typing import List
+
 from sqlalchemy import String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 from app.db.mixins import SoftDeleteMixin, TimestampMixin
@@ -21,3 +23,6 @@ class User(Base, TimestampMixin, SoftDeleteMixin):
 
     # Hashed password string, required for authentication storage.
     password_hash: Mapped[str] = mapped_column(String, nullable=False)
+
+    owned_groups: Mapped[List["Group"]] = relationship("Group", back_populates="owner", cascade="all, delete-orphan")
+    memberships: Mapped[List["GroupMember"]] = relationship("GroupMember", back_populates="user", cascade="all, delete-orphan")
