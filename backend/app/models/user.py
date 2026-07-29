@@ -26,3 +26,4 @@ class User(Base, TimestampMixin, SoftDeleteMixin):
 
     owned_groups: Mapped[List["Group"]] = relationship("Group", back_populates="owner", cascade="all, delete-orphan")
     memberships: Mapped[List["GroupMember"]] = relationship("GroupMember", back_populates="user", cascade="all, delete-orphan")
+    expenses_paid: Mapped[List["Expense"]] = relationship("Expense", back_populates="payer", cascade="all, delete-orphan")
