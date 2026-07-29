@@ -20,6 +20,9 @@ class Settings(BaseSettings):
 
     DATABASE_URL: str
     DB_ECHO: bool = False
+    JWT_SECRET_KEY: str = "CHANGE_ME"
+    JWT_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
 
 @lru_cache
