@@ -7,7 +7,6 @@ from sqlalchemy.orm import Session
 
 from app.crud.expense import (
     create_expense as crud_create_expense,
-    get_expense_by_id as crud_get_expense_by_id,
     get_group_expense as crud_get_group_expense,
     list_expenses_for_group as crud_list_expenses_for_group,
     count_expenses_for_group as crud_count_expenses_for_group,
