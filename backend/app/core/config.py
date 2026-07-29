@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     APP_VERSION: str = "0.1.0"
     DEBUG: bool = False
 
+    DATABASE_URL: str
+    DB_ECHO: bool = False
+
 
 @lru_cache
 def get_settings() -> Settings:
