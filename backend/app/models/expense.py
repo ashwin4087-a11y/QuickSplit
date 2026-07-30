@@ -26,3 +26,4 @@ class Expense(Base, TimestampMixin):
     # Relationships
     payer = relationship("User", back_populates="expenses_paid", lazy="joined")
     group = relationship("Group", back_populates="expenses", lazy="joined")
+    splits = relationship("ExpenseSplit", back_populates="expense", cascade="all, delete-orphan")
