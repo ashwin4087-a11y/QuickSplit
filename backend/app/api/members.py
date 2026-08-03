@@ -20,7 +20,7 @@ def add_member(
     current_user: User = Depends(get_current_user),
 ) -> MemberResponse:
     user = svc_add_member(db, current_user, group_id, member_in)
-    return MemberResponse.from_orm(user)
+    return MemberResponse.model_validate(user)
 
 
 @router.get("", response_model=List[MemberResponse], status_code=status.HTTP_200_OK)
@@ -30,7 +30,7 @@ def list_members(
     current_user: User = Depends(get_current_user),
 ) -> List[MemberResponse]:
     users = svc_list_members(db, current_user, group_id)
-    return [MemberResponse.from_orm(user) for user in users]
+    return [MemberResponse.model_validate(user) for user in users]
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)

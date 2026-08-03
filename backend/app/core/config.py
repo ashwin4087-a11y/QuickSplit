@@ -22,9 +22,10 @@ class Settings(BaseSettings):
     DATABASE_URL: str
     DB_ECHO: bool = False
     SECRET_KEY: str | None = None
-    JWT_SECRET_KEY: str = Field("CHANGE_ME", env="JWT_SECRET_KEY")
-    JWT_ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    JWT_SECRET_KEY: str = Field(..., description="Secret key for JWT generation")
+    JWT_ALGORITHM: str = Field(..., description="JWT Algorithm to use")
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(..., description="Access token expiration time")
+    BACKEND_CORS_ORIGINS: list[str] = Field(default=["*"], description="CORS origins list")
 
     @model_validator(mode="before")
     def map_secret_key(cls, values: dict[str, object]) -> dict[str, object]:

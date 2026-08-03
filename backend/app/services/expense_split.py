@@ -27,6 +27,11 @@ def _validate_splits(db: Session, group_id: int, splits_in: ExpenseSplitCreateRe
     seen_user_ids = set()
     total_amount = Decimal("0")
 
+    # Fetch all members of the group in one query to avoid N+1 queries
+    from app.crud.member import list_group_members
+    group_members = list_group_members(db, group_id)
+    group_member_ids = {member.id for member in group_members}
+
     for split in splits_in.splits:
         if split.amount_owed <= 0:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Each amount owed must be greater than 0")
@@ -35,8 +40,7 @@ def _validate_splits(db: Session, group_id: int, splits_in: ExpenseSplitCreateRe
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Duplicate users are not allowed")
         seen_user_ids.add(split.user_id)
 
-        membership = get_group_member(db, group_id, split.user_id)
-        if membership is None:
+        if split.user_id not in group_member_ids:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Each user must belong to the group")
 
         total_amount += split.amount_owed
