@@ -9,6 +9,7 @@ from app.api.expenses import router as expenses_router
 from app.api.expense_splits import router as expense_splits_router
 from app.api.balances import router as balances_router
 from app.api.settlements import router as settlements_router
+from app.api.settlements import settlement_payments_router
 from app.core.config import get_settings
 
 settings = get_settings()
@@ -26,6 +27,7 @@ app.include_router(expenses_router)
 app.include_router(expense_splits_router)
 app.include_router(balances_router)
 app.include_router(settlements_router)
+app.include_router(settlement_payments_router)
 
 
 @app.get("/")

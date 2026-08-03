@@ -1,37 +1,26 @@
 from datetime import datetime
 from decimal import Decimal
-from typing import List
-
-from pydantic import BaseModel, ConfigDict, Field
-
-
-class SettlementItem(BaseModel):
-    from_user_id: int
-    to_user_id: int
-    amount: Decimal = Field(gt=0)
-
-
-class SettlementResponse(BaseModel):
-    settlements: List[SettlementItem]
-
-    model_config = ConfigDict(from_attributes=True)
-from datetime import datetime
-from decimal import Decimal
 from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
 class SettlementCreate(BaseModel):
-    from_user_id: int
-    to_user_id: int
-    amount: Decimal = Field(gt=0)
+    """Request schema for creating a settlement payment."""
+    payer_id: int
+    receiver_id: int
+    amount: Decimal = Field(gt=0, examples=["500.00"])
 
 
 class SettlementResponse(BaseModel):
-    from_user_id: int
-    to_user_id: int
+    """Response schema for settlement payment records."""
+    id: int
+    group_id: int
+    payer_id: int
+    receiver_id: int
     amount: Decimal
-    created_at: Optional[datetime] = None
+    status: str
+    created_at: datetime
+    settled_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)

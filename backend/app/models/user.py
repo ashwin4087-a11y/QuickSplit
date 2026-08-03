@@ -28,3 +28,5 @@ class User(Base, TimestampMixin, SoftDeleteMixin):
     memberships: Mapped[List["GroupMember"]] = relationship("GroupMember", back_populates="user", cascade="all, delete-orphan")
     expenses_paid: Mapped[List["Expense"]] = relationship("Expense", back_populates="payer", cascade="all, delete-orphan")
     expense_splits: Mapped[List["ExpenseSplit"]] = relationship("ExpenseSplit", back_populates="user", cascade="all, delete-orphan")
+    settlements_paid: Mapped[List["Settlement"]] = relationship("Settlement", foreign_keys="[Settlement.payer_id]", back_populates="payer", cascade="all, delete-orphan")
+    settlements_received: Mapped[List["Settlement"]] = relationship("Settlement", foreign_keys="[Settlement.receiver_id]", back_populates="receiver", cascade="all, delete-orphan")

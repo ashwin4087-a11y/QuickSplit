@@ -1,49 +1,115 @@
+from datetime import datetime, timezone
 from decimal import Decimal
-from typing import List, Tuple
+from typing import List
+import logging
 
-from app.services.balance import compute_group_balances
+from fastapi import HTTPException, status
+from sqlalchemy.orm import Session
+
+from app.crud.member import get_group_member
+from app.crud.settlement import (
+    create_settlement as crud_create_settlement,
+    get_settlement_by_id as crud_get_settlement_by_id,
+    list_settlements_for_group as crud_list_settlements_for_group,
+    update_settlement_status as crud_update_settlement_status,
+)
+from app.models.settlement import Settlement
+from app.models.user import User
+from app.schemas.settlement import SettlementCreate
+from app.services.balance import _ensure_group_and_membership
+
+logger = logging.getLogger(__name__)
 
 
-def compute_group_settlements(db, group_id: int) -> List[dict]:
-    balances = compute_group_balances(db, group_id)
+def create_settlement(
+    db: Session, current_user: User, group_id: int, settlement_in: SettlementCreate
+) -> Settlement:
+    # Ensure current user is authorized to access the group
+    _ensure_group_and_membership(db, group_id, current_user.id)
 
-    creditors: List[Tuple[int, Decimal]] = []
-    debtors: List[Tuple[int, Decimal]] = []
+    # Validate payer != receiver
+    if settlement_in.payer_id == settlement_in.receiver_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Payer and receiver must be different users",
+        )
 
-    for member_id, values in balances.items():
-        balance = values["balance"]
-        if balance > 0:
-            creditors.append((member_id, balance))
-        elif balance < 0:
-            debtors.append((member_id, -balance))
+    # Validate amount > 0
+    if settlement_in.amount <= Decimal("0.00"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Amount must be greater than 0",
+        )
 
-    creditors.sort(key=lambda item: item[1], reverse=True)
-    debtors.sort(key=lambda item: item[1], reverse=True)
+    # Validate payer is a group member
+    if get_group_member(db, group_id, settlement_in.payer_id) is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Payer is not a member of the group",
+        )
 
-    settlements: List[dict] = []
-    creditor_index = 0
-    debtor_index = 0
+    # Validate receiver is a group member
+    if get_group_member(db, group_id, settlement_in.receiver_id) is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Receiver is not a member of the group",
+        )
 
-    while creditor_index < len(creditors) and debtor_index < len(debtors):
-        creditor_id, creditor_amount = creditors[creditor_index]
-        debtor_id, debtor_amount = debtors[debtor_index]
+    try:
+        settlement = crud_create_settlement(
+            db,
+            group_id=group_id,
+            payer_id=settlement_in.payer_id,
+            receiver_id=settlement_in.receiver_id,
+            amount=settlement_in.amount,
+        )
+        db.commit()
+        db.refresh(settlement)
+        logger.info("Settlement created: %s by user %s", settlement.id, current_user.id)
+        return settlement
+    except Exception:
+        db.rollback()
+        raise
 
-        amount = min(creditor_amount, debtor_amount)
-        if amount <= 0:
-            break
 
-        settlements.append({
-            "from_user_id": debtor_id,
-            "to_user_id": creditor_id,
-            "amount": amount,
-        })
+def list_settlements(
+    db: Session, current_user: User, group_id: int
+) -> List[Settlement]:
+    _ensure_group_and_membership(db, group_id, current_user.id)
+    return crud_list_settlements_for_group(db, group_id)
 
-        creditors[creditor_index] = (creditor_id, creditor_amount - amount)
-        debtors[debtor_index] = (debtor_id, debtor_amount - amount)
 
-        if creditors[creditor_index][1] == 0:
-            creditor_index += 1
-        if debtors[debtor_index][1] == 0:
-            debtor_index += 1
+def complete_settlement(
+    db: Session, current_user: User, settlement_id: int
+) -> Settlement:
+    settlement = crud_get_settlement_by_id(db, settlement_id)
+    if settlement is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Settlement not found",
+        )
 
-    return settlements
+    # Ensure current user is a member of the settlement's group
+    _ensure_group_and_membership(db, settlement.group_id, current_user.id)
+
+    # Cannot complete an already-completed settlement
+    if settlement.status == "COMPLETED":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Settlement is already completed",
+        )
+
+    try:
+        updated = crud_update_settlement_status(
+            db,
+            settlement,
+            status="COMPLETED",
+            settled_at=datetime.now(timezone.utc),
+        )
+        db.commit()
+        db.refresh(updated)
+        logger.info("Settlement completed: %s by user %s", updated.id, current_user.id)
+        return updated
+    except Exception:
+        db.rollback()
+        raise

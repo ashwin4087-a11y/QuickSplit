@@ -24,6 +24,7 @@ class Group(Base, TimestampMixin):
     owner = relationship("User", back_populates="owned_groups", lazy="joined")
     members = relationship("GroupMember", back_populates="group", cascade="all, delete-orphan")
     expenses = relationship("Expense", back_populates="group", cascade="all, delete-orphan")
+    settlements = relationship("Settlement", back_populates="group", cascade="all, delete-orphan")
 
 
 class GroupMember(Base):
